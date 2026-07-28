@@ -1,45 +1,35 @@
 name: Blogger Automation Workflow
 
 on:
-  schedule:
-    - cron: '0 */3 * * *'
   workflow_dispatch:
+  schedule:
+    - cron: '0 */3 * * *' # প্রতি ৩ ঘণ্টা পরপর স্বয়ংক্রিয়ভাবে রান হবে
 
 jobs:
   build-and-run:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-
     steps:
-    - name: Check out Repository
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # এখানে ভার্সন আপডেট করা হয়েছে
+        python-version: '3.10'
 
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install google-generativeai google-auth-oauthlib google-api-python-client
 
     - name: Execute Main Script
       env:
+        GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         BLOG_ID: ${{ secrets.BLOG_ID }}
         BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
         BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
         BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
-        GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
-      run: python main.py
-
-    - name: Commit and push updated category state
       run: |
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "actions@github.com"
-        git add state.json
-        git diff --staged --quiet || git commit -m "Update category sequence in state.json [skip ci]"
-        git push
+        python main.py
         

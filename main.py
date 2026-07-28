@@ -5,14 +5,14 @@ import google.generativeai as genai
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-# ১. গিটহাব সিক্রেটস থেকে ক্রেডেনশিয়াল সংগ্রহ
+# গিটহাব সিক্রেটস থেকে ক্রেডেনশিয়াল সংগ্রহ
 GEMINI_API_KEYS = os.environ.get("GEMINI_API_KEYS", "").split(",")
 BLOG_ID = os.environ.get("BLOG_ID")
 CLIENT_ID = os.environ.get("BLOGGER_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("BLOGGER_CLIENT_SECRET")
 REFRESH_TOKEN = os.environ.get("BLOGGER_REFRESH_TOKEN")
 
-# বিভিন্ন ক্যাটাগরি বা মেনুর তালিকা, যেখান থেকে ঘুরিয়ে ফিরিয়ে পোস্ট তৈরি হবে
+# ক্যাটাগরি বা মেনু তালিকা
 CATEGORIES = [
     {"name": "Technology", "focus": "Latest tech trends, AI advancements, and gadget reviews."},
     {"name": "Finance", "focus": "Personal finance tips, investment strategies, and crypto updates."},
@@ -20,7 +20,6 @@ CATEGORIES = [
     {"name": "Lifestyle", "focus": "Productivity hacks, remote work tips, and self-improvement."}
 ]
 
-# ২. জেমিনি এপিআই কনফিগারেশন এবং কন্টেন্ট জেনারেশন
 def generate_blog_post():
     if not GEMINI_API_KEYS or not GEMINI_API_KEYS[0]:
         print("Error: Gemini API Key পাওয়া যায়নি।")
@@ -29,9 +28,9 @@ def generate_blog_post():
     api_key = random.choice(GEMINI_API_KEYS).strip()
     genai.configure(api_key=api_key)
 
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # বর্তমান সিস্টেমের সাথে সামঞ্জস্যপূর্ণ সঠিক মডেল
+    model = genai.GenerativeModel('gemini-2.5-flash')
 
-    # রেন্ডমলি একটি ক্যাটাগরি বেছে নেওয়া যাতে প্রতিবার আলাদা ক্যাটাগরিতে পোস্ট হয়
     selected_category = random.choice(CATEGORIES)
     
     prompt = f"""
@@ -40,8 +39,6 @@ def generate_blog_post():
     The post must be well-structured using proper HTML tags (<h2>, <h3>, <p>, <ul>, <li>, <strong>) for readability and SEO.
     Do NOT include <html>, <head>, or <body> tags, only the content.
     
-    Include relevant tags/labels matching the category: ["{selected_category['name']}"].
-
     Format the output STRICTLY as a JSON object with the following structure without any extra markdown formatting like ```json:
     {{
         "title": "A Catchy, SEO-Optimized Title",
@@ -54,6 +51,7 @@ def generate_blog_post():
         response = model.generate_content(prompt)
         raw_text = response.text.strip()
         
+        # ফরম্যাটিং ক্লিয়ার করার জন্য
         if raw_text.startswith("```json"):
             raw_text = raw_text[7:]
         if raw_text.endswith("```"):
@@ -65,7 +63,6 @@ def generate_blog_post():
         print(f"Error generating content: {e}")
         return None
 
-# ৩. ব্লগার এপিআই এর মাধ্যমে পোস্ট পাবলিশ করা
 def post_to_blogger(post_data):
     if not all([CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN, BLOG_ID]):
         print("Error: Blogger API credentials missing.")
@@ -107,4 +104,5 @@ if __name__ == "__main__":
         post_to_blogger(post_data)
     else:
         print("❌ Failed to generate content. Workflow stopped.")
+    
     

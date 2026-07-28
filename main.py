@@ -12,42 +12,48 @@ CLIENT_ID = os.environ.get("BLOGGER_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("BLOGGER_CLIENT_SECRET")
 REFRESH_TOKEN = os.environ.get("BLOGGER_REFRESH_TOKEN")
 
+# বিভিন্ন ক্যাটাগরি বা মেনুর তালিকা, যেখান থেকে ঘুরিয়ে ফিরিয়ে পোস্ট তৈরি হবে
+CATEGORIES = [
+    {"name": "Technology", "focus": "Latest tech trends, AI advancements, and gadget reviews."},
+    {"name": "Finance", "focus": "Personal finance tips, investment strategies, and crypto updates."},
+    {"name": "Internet & SEO", "focus": "Blogging tips, SEO strategies, and digital marketing tricks."},
+    {"name": "Lifestyle", "focus": "Productivity hacks, remote work tips, and self-improvement."}
+]
+
 # ২. জেমিনি এপিআই কনফিগারেশন এবং কন্টেন্ট জেনারেশন
 def generate_blog_post():
     if not GEMINI_API_KEYS or not GEMINI_API_KEYS[0]:
         print("Error: Gemini API Key পাওয়া যায়নি।")
         return None
 
-    # যেকোনো একটি API Key ব্যবহার করা (যাতে Rate Limit না হয়)
     api_key = random.choice(GEMINI_API_KEYS).strip()
     genai.configure(api_key=api_key)
 
-    # সঠিক মডেল নির্বাচন: gemini-1.5-flash
     model = genai.GenerativeModel('gemini-1.5-flash')
 
-    # এসইও এবং ক্যাটাগরি (মেনু) অনুযায়ী প্রম্পট
-    prompt = """
+    # রেন্ডমলি একটি ক্যাটাগরি বেছে নেওয়া যাতে প্রতিবার আলাদা ক্যাটাগরিতে পোস্ট হয়
+    selected_category = random.choice(CATEGORIES)
+    
+    prompt = f"""
     Write a highly SEO-optimized and engaging blog post in English.
-    The topic should be related to technology, finance, or internet tips (choose randomly).
+    Category/Menu Focus: {selected_category['name']} ({selected_category['focus']}).
     The post must be well-structured using proper HTML tags (<h2>, <h3>, <p>, <ul>, <li>, <strong>) for readability and SEO.
     Do NOT include <html>, <head>, or <body> tags, only the content.
     
-    Also, generate 2-3 relevant tags/labels which will act as menu categories for the blog.
+    Include relevant tags/labels matching the category: ["{selected_category['name']}"].
 
     Format the output STRICTLY as a JSON object with the following structure without any extra markdown formatting like ```json:
-    {
+    {{
         "title": "A Catchy, SEO-Optimized Title",
         "content": "The full HTML formatted content of the post",
-        "labels": ["Category1", "Category2"]
-    }
+        "labels": ["{selected_category['name']}"]
+    }}
     """
 
     try:
         response = model.generate_content(prompt)
-        # JSON ডেটা প্রসেস করা
         raw_text = response.text.strip()
         
-        # যদি মডেল ভুল করে ```json যুক্ত করে দেয়, সেটি রিমুভ করার ব্যবস্থা
         if raw_text.startswith("```json"):
             raw_text = raw_text[7:]
         if raw_text.endswith("```"):
@@ -68,7 +74,7 @@ def post_to_blogger(post_data):
     creds = Credentials(
         token=None,
         refresh_token=REFRESH_TOKEN,
-        token_uri="https://oauth2.googleapis.com/token",
+        token_uri="[https://oauth2.googleapis.com/token](https://oauth2.googleapis.com/token)",
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET
     )
@@ -80,18 +86,17 @@ def post_to_blogger(post_data):
             "kind": "blogger#post",
             "title": post_data["title"],
             "content": post_data["content"],
-            "labels": post_data["labels"] # এই লেবেলগুলোই ব্লগের মেনু বা ক্যাটাগরি হিসেবে কাজ করবে
+            "labels": post_data["labels"]
         }
 
         request = service.posts().insert(blogId=BLOG_ID, body=post_body, isDraft=False)
         response = request.execute()
         print(f"✅ Post published successfully! Link: {response.get('url')}")
-        print(f"✅ Categories/Menus added: {', '.join(post_data['labels'])}")
+        print(f"✅ Category/Menu added: {', '.join(post_data['labels'])}")
 
     except Exception as e:
         print(f"Error posting to Blogger: {e}")
 
-# স্ক্রিপ্ট রান করা
 if __name__ == "__main__":
     print("Starting Blogger Automation Script...")
     post_data = generate_blog_post()
